@@ -1,0 +1,61 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {    // Check for correct number of arguments
+        fprintf(stderr, "Usage: %s [ip] [port]\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    char *ip = argv[1];         // First arg: server IP address (dotted quad)
+    int port = atoi(argv[2]);   // Second arg: server port
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);  // Create a TCP socket
+    if (sock == -1) {
+        perror("socket");       // Print error message if socket creation failed
+        exit(EXIT_FAILURE);
+    }
+
+    struct sockaddr_in server_addr;              // Server address structure
+    memset(&server_addr, 0, sizeof(server_addr));   // Zero out structure
+    server_addr.sin_family = AF_INET;                // Internet address family
+    inet_pton(AF_INET, ip, &server_addr.sin_addr.s_addr);   // Server IP address
+    server_addr.sin_port = htons(port);          // Server port
+
+    if (connect(sock, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {  // Connect to server
+        perror("connect");       // Print error message if connection failed
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Connected to server\n");  // Print message indicating successful connection
+
+    while (1) {  // Loop indefinitely
+        if (send(sock, "ping", 4, 0) == -1) {  // Send "ping" message to server
+            perror("send");       // Print error message if send failed
+            exit(EXIT_FAILURE);
+        }
+        printf("Sent ping to server\n");  // Print message indicating successful send
+
+        char buffer[5];           // Buffer for received data
+        ssize_t n = recv(sock, buffer, 5, 0);   // Receive data from server
+        if (n == -1) {
+            perror("recv");       // Print error message if receive failed
+            exit(EXIT_FAILURE);
+        } else if (n == 0) {
+            printf("Server disconnected\n");   // Print message indicating server disconnection
+            exit(EXIT_SUCCESS);
+        } else {
+            buffer[n] = '\0';      // Null-terminate received data
+            printf("Received message from server: %s\n", buffer);   // Print received data
+        }
+
+        sleep(1);   // Sleep for one second before sending next "ping" message
+    }
+
+    return 0;
+}
