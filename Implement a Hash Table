@@ -1,0 +1,91 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define TABLE_SIZE 100 /* Define a constant for the size of the hash table */
+
+/* Define a node structure to represent a key-value pair */
+typedef struct node {
+    char *key; /* Pointer to the key */
+    char *value; /* Pointer to the value */
+    struct node *next; /* Pointer to the next node in the linked list */
+} node;
+
+/* Declare the hash table as an array of pointers to nodes */
+node *hash_table[TABLE_SIZE];
+
+/* Define a hash function that takes a string key and returns an index */
+unsigned int hash(char *key) {
+    unsigned long int value = 0; /* Initialize the hash value to 0 */
+    unsigned int i = 0; /* Initialize the loop counter to 0 */
+    unsigned int key_len = strlen(key); /* Compute the length of the key */
+
+    /* Compute the hash value by summing the ASCII values of the characters in the key */
+    for (; i < key_len; ++i) {
+        value = value * 37 + key[i];
+    }
+
+    /* Take the modulus of the hash value with the size of the hash table */
+    value = value % TABLE_SIZE;
+
+    return value; /* Return the computed index */
+}
+
+/* Define a function to create a new node with the given key and value */
+node *create_node(char *key, char *value) {
+    node *new_node = malloc(sizeof(node)); /* Allocate memory for a new node */
+    new_node->key = malloc(strlen(key) + 1); /* Allocate memory for the key */
+    new_node->value = malloc(strlen(value) + 1); /* Allocate memory for the value */
+
+    strcpy(new_node->key, key); /* Copy the key into the new node */
+    strcpy(new_node->value, value); /* Copy the value into the new node */
+    new_node->next = NULL; /* Set the next pointer to NULL */
+
+    return new_node; /* Return a pointer to the new node */
+}
+
+/* Define a function to insert a key-value pair into the hash table */
+void insert(char *key, char *value) {
+    unsigned int index = hash(key); /* Compute the index for the given key using the hash function */
+    node *new_node = create_node(key, value); /* Create a new node with the given key and value */
+
+    /* If the index is empty, insert the new node at that index */
+    if (hash_table[index] == NULL) {
+        hash_table[index] = new_node;
+        return;
+    }
+
+    /* If the index is not empty, append the new node to the end of the linked list at that index */
+    node *current_node = hash_table[index];
+    while (current_node->next != NULL) {
+        current_node = current_node->next;
+    }
+    current_node->next = new_node;
+}
+
+/* Define a function to search for a key in the hash table and return its associated value */
+char *search(char *key) {
+    unsigned int index = hash(key); /* Compute the index for the given key using the hash function */
+    node *current_node = hash_table[index]; /* Get a pointer to the first node in the linked list at that index */
+
+    /* Traverse the linked list at the given index until the key is found or the end of the list is reached */
+    while (current_node != NULL && strcmp(current_node->key, key) != 0) {
+        current_node = current_node->next;
+    }
+
+    /* If the key was not found, return NULL. Otherwise, return its associated value */
+    if (current_node == NULL) {
+        return NULL;
+    } else {
+        return current_node->value;
+    }
+}
+
+int main() {
+    insert("name", "John"); /* Insert a key-value pair into the hash table */
+    insert("age", "25"); /* Insert another key-value pair into the hash table */
+    
+    printf("%s\n", search("name")); /* Search for a key in the hash table and print its associated value */
+    
+    return 0; /* Return 0 to indicate successful execution */
+}
