@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#define QUEUE_SIZE 10
+#define NUM_READERS 5
+
+/* Define a queue structure */
+typedef struct queue {
+    char **data; /* Array of string data */
+    int head; /* Index of the head of the queue */
+    int tail; /* Index of the tail of the queue */
+    int size; /* Maximum size of the queue */
+    pthread_mutex_t mutex; /* Mutex to synchronize access to the queue */
+    pthread_cond_t not_full; /* Condition variable to signal when the queue is not full */
+    pthread_cond_t not_empty; /* Condition variable to signal when the queue is not empty */
+} queue;
+
+/* Function to create a new queue with the given size */
+queue *create_queue(int size) {
+    queue *q = malloc(sizeof(queue));
+    q->data = malloc(size * sizeof(char *));
+    q->head = 0;
+    q->tail = 0;
+    q->size = size;
+    pthread_mutex_init(&q->mutex, NULL);
+    pthread_cond_init(&q->not_full, NULL);
+    pthread_cond_init(&q->not_empty, NULL);
+    return q;
+}
+
+/* Function to enqueue a string value into the queue */
+void enqueue(queue *q, char *value) {
+    pthread_mutex_lock(&q->mutex); /* Lock the mutex to synchronize access to the queue */
+    while ((q->tail + 1) % q->size == q->head) { /* If the queue is full, wait for it to become not full */
+        pthread_cond_wait(&q->not_full, &q->mutex);
+    }
+    q->data[q->tail] = value; /* Add the value to the tail of the queue */
+    q->tail = (q->tail + 1) % q->size; /* Update the tail index */
+    pthread_cond_signal(&q->not_empty); /* Signal that the queue is not empty */
+    pthread_mutex_unlock(&q->mutex); /* Unlock the mutex */
+}
+
+/* Function to dequeue a string value from the queue */
+char *dequeue(queue *q) {
+    pthread_mutex_lock(&q->mutex); /* Lock the mutex to synchronize access to the queue */
+    while (q->head == q->tail) { /* If the queue is empty, wait for it to become not empty */
+        pthread_cond_wait(&q->not_empty, &q->mutex);
+    }
+    char *value = q->data[q->head]; /* Get the value at the head of the queue */
+    q->head = (q->head + 1) % q->size; /* Update the head index */
+    pthread_cond_signal(&q->not_full); /* Signal that the queue is not full */
+    pthread_mutex_unlock(&q->mutex); /* Unlock the mutex */
+    return value;
+}
+
+/* Function to be run by reader threads */
+void *reader(void *arg) {
+    queue *q = (queue *) arg;
+    while (1) {
+        char *value = dequeue(q); /* Dequeue a value from the queue */
+        printf("%s\n", value); /* Print the dequeued value */
+        free(value); /* Free the memory used by the dequeued value */
+        usleep(1000000); // sleep for 1 second
+    }
+}
+
+/* Function to be run by writer thread */
+void *writer(void *arg) {
+    queue *q = (queue *) arg;
+    int i = 0;
+    while (1) {
+        char *value = malloc(20); /* Allocate memory for a new value */
+        sprintf(value, "Message %d", i++); /* Create a new message with an increasing counter */
+        enqueue(q, value); /* Enqueue the new message into the queue */
+        usleep(200000); // sleep for 0.2 seconds
+    }
+}
+
+int main() {
+    queue *q = create_queue(QUEUE_SIZE);
+
+    pthread_t readers[NUM_READERS];
+    for (int i = 0; i < NUM_READERS; i++) {
+        pthread_create(&readers[i], NULL, reader, q);
+    }
+
+    pthread_t writer_thread;
+    pthread_create(&writer_thread, NULL, writer, q);
+
+    for (int i = 0; i < NUM_READERS; i++) {
+        pthread_join(readers[i], NULL);
+    }
+    pthread_join(writer_thread, NULL);
+
+    return 0;
+}
