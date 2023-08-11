@@ -1,0 +1,98 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <errno.h>
+
+#define MAX_CLIENTS 10 /* Define a constant for the maximum number of clients */
+
+int main(int argc, char *argv[]) 
+{
+    if (argc != 2) { /* Check if the number of command-line arguments is correct */
+        fprintf(stderr, "Usage: %s [port]\n", argv[0]); /* Print an error message */
+        exit(EXIT_FAILURE); /* Exit with a failure status */
+    }
+
+    int port = atoi(argv[1]); /* Convert the port number from a string to an integer */
+
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0); /* Create a new socket for the server */
+    if (server_fd == -1) { /* Check if the socket was created successfully */
+        perror("socket"); /* Print an error message */
+        exit(EXIT_FAILURE); /* Exit with a failure status */
+    }
+
+    struct sockaddr_in server_addr; /* Declare a structure to hold the server's address */
+    memset(&server_addr, 0, sizeof(server_addr)); /* Initialize the server address structure to zero */
+    server_addr.sin_family = AF_INET; /* Set the address family to Internet Protocol v4 addresses */
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); /* Set the IP address to accept connections on any network interface */
+    server_addr.sin_port = htons(port); /* Set the port number */
+
+    if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) { /* Bind the socket to the server's address */
+        perror("bind"); /* Print an error message */
+        exit(EXIT_FAILURE); /* Exit with a failure status */
+    }
+
+    if (listen(server_fd, MAX_CLIENTS) == -1) { /* Listen for incoming connections on the socket */
+        perror("listen"); /* Print an error message */
+        exit(EXIT_FAILURE); /* Exit with a failure status */
+    }
+
+    printf("Server listening on port %d\n", port); /* Print a message indicating that the server is listening */
+
+    int max_fd = server_fd; /* Initialize the maximum file descriptor number to be equal to the server's file descriptor number */
+    fd_set read_fds; /* Declare a set of file descriptors to be monitored for readability */
+    FD_ZERO(&read_fds); /* Initialize the set of file descriptors to be empty */
+    FD_SET(server_fd, &read_fds); /* Add the server's file descriptor to the set of file descriptors */
+
+    while (1) { /* Enter an infinite loop to handle incoming connections and messages from clients */
+        fd_set ready_fds = read_fds; /* Make a copy of the set of file descriptors to be passed to select() */
+        if (select(max_fd + 1, &ready_fds, NULL, NULL, NULL) == -1) { /* Wait for one or more file descriptors to become ready for reading */
+            perror("select"); /* Print an error message */
+            exit(EXIT_FAILURE); /* Exit with a failure status */
+        }
+
+        for (int i = 0; i <= max_fd; i++) { /* Loop over all possible file descriptor numbers up to and including max_fd */
+            if (FD_ISSET(i, &ready_fds)) { /* Check if this file descriptor is ready for reading */
+                if (i == server_fd) { 
+                    struct sockaddr_in client_addr; 
+                    socklen_t client_len = sizeof(client_addr);
+                    int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, &client_len);
+                    if (client_fd == -1) {
+                        perror("accept");
+                        continue;
+                    }
+                    printf("Accepted new client\n");
+                    FD_SET(client_fd, &read_fds);
+                    if (client_fd > max_fd) {
+                        max_fd = client_fd;
+                    }
+                } else {
+                    char buffer[5];
+                    ssize_t n = recv(i, buffer, 5, 0);
+                    if (n == -1) {
+                        perror("recv");
+                        continue;
+                    } else if (n == 0) {
+                        printf("Client disconnected\n");
+                        close(i);
+                        FD_CLR(i, &read_fds);
+                    } else {
+                        buffer[n] = '\0';
+                        printf("Received message from client: %s\n", buffer);
+                        if (strcmp(buffer, "ping") == 0) {
+                            if (send(i, "pong", 4, 0) == -1) {
+                                perror("send");
+                                continue;
+                            }
+                            printf("Sent pong response to client\n");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return 0; /* Return 0 to indicate successful execution */
+}
