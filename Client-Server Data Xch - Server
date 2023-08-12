@@ -6,21 +6,20 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define MAX_CLIENTS 10 /* Define a constant for the maximum number of clients */
+#define MAX_CLIENTS 10
 
 int main(int argc, char *argv[]) 
 {
-    if (argc != 2) { /* Check if the number of command-line arguments is correct */
-        fprintf(stderr, "Usage: %s [port]\n", argv[0]); /* Print an error message */
-        exit(EXIT_FAILURE); /* Exit with a failure status */
+    if (argc != 2) { 
+        fprintf(stderr, "Usage: %s [port]\n", argv[0]);
+        exit(EXIT_FAILURE);
     }
 
-    int port = atoi(argv[1]); /* Convert the port number from a string to an integer */
-
+    int port = atoi(argv[1]);
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); /* Create a new socket for the server */
-    if (server_fd == -1) { /* Check if the socket was created successfully */
-        perror("socket"); /* Print an error message */
-        exit(EXIT_FAILURE); /* Exit with a failure status */
+    if (server_fd == -1) {
+        perror("socket");
+        exit(EXIT_FAILURE);
     }
 
     struct sockaddr_in server_addr; /* Declare a structure to hold the server's address */
@@ -29,14 +28,14 @@ int main(int argc, char *argv[])
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY); /* Set the IP address to accept connections on any network interface */
     server_addr.sin_port = htons(port); /* Set the port number */
 
-    if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) { /* Bind the socket to the server's address */
-        perror("bind"); /* Print an error message */
-        exit(EXIT_FAILURE); /* Exit with a failure status */
+    if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {
+        perror("bind");
+        exit(EXIT_FAILURE);
     }
 
-    if (listen(server_fd, MAX_CLIENTS) == -1) { /* Listen for incoming connections on the socket */
-        perror("listen"); /* Print an error message */
-        exit(EXIT_FAILURE); /* Exit with a failure status */
+    if (listen(server_fd, MAX_CLIENTS) == -1) {
+        perror("listen");
+        exit(EXIT_FAILURE);
     }
 
     printf("Server listening on port %d\n", port); /* Print a message indicating that the server is listening */
@@ -94,5 +93,5 @@ int main(int argc, char *argv[])
         }
     }
 
-    return 0; /* Return 0 to indicate successful execution */
+    return 0;
 }
