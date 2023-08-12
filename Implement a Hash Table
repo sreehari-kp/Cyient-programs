@@ -87,5 +87,5 @@ int main() {
     
     printf("%s\n", search("name")); /* Search for a key in the hash table and print its associated value */
     
-    return 0; /* Return 0 to indicate successful execution */
+    return 0;
 }
