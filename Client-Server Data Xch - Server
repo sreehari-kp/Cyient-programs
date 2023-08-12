@@ -16,17 +16,17 @@ int main(int argc, char *argv[])
     }
 
     int port = atoi(argv[1]);
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0); /* Create a new socket for the server */
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);  /* Create a new socket for the server */
     if (server_fd == -1) {
         perror("socket");
         exit(EXIT_FAILURE);
     }
 
-    struct sockaddr_in server_addr; /* Declare a structure to hold the server's address */
-    memset(&server_addr, 0, sizeof(server_addr)); /* Initialize the server address structure to zero */
-    server_addr.sin_family = AF_INET; /* Set the address family to Internet Protocol v4 addresses */
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); /* Set the IP address to accept connections on any network interface */
-    server_addr.sin_port = htons(port); /* Set the port number */
+    struct sockaddr_in server_addr;  /* Declare a structure to hold the server's address */
+    memset(&server_addr, 0, sizeof(server_addr));  /* Initialize the server address structure to zero */
+    server_addr.sin_family = AF_INET;  /* Set the address family to Internet Protocol v4 addresses */
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);  /* Set the IP address to accept connections on any network interface */
+    server_addr.sin_port = htons(port);  /* Set the port number */
 
     if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {
         perror("bind");
@@ -38,22 +38,22 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d\n", port); /* Print a message indicating that the server is listening */
+    printf("Server listening on port %d\n", port);  /* Print a message indicating that the server is listening */
 
-    int max_fd = server_fd; /* Initialize the maximum file descriptor number to be equal to the server's file descriptor number */
-    fd_set read_fds; /* Declare a set of file descriptors to be monitored for readability */
-    FD_ZERO(&read_fds); /* Initialize the set of file descriptors to be empty */
-    FD_SET(server_fd, &read_fds); /* Add the server's file descriptor to the set of file descriptors */
+    int max_fd = server_fd;  /* Initialize the maximum file descriptor number to be equal to the server's file descriptor number */
+    fd_set read_fds;  /* Declare a set of file descriptors to be monitored for readability */
+    FD_ZERO(&read_fds);  /* Initialize the set of file descriptors to be empty */
+    FD_SET(server_fd, &read_fds);  /* Add the server's file descriptor to the set of file descriptors */
 
-    while (1) { /* Enter an infinite loop to handle incoming connections and messages from clients */
-        fd_set ready_fds = read_fds; /* Make a copy of the set of file descriptors to be passed to select() */
-        if (select(max_fd + 1, &ready_fds, NULL, NULL, NULL) == -1) { /* Wait for one or more file descriptors to become ready for reading */
-            perror("select"); /* Print an error message */
-            exit(EXIT_FAILURE); /* Exit with a failure status */
+    while (1) {  /* Enter an infinite loop to handle incoming connections and messages from clients */
+        fd_set ready_fds = read_fds;  /* Make a copy of the set of file descriptors to be passed to select() */
+        if (select(max_fd + 1, &ready_fds, NULL, NULL, NULL) == -1) {  /* Wait for one or more file descriptors to become ready for reading */
+            perror("select");  /* Print an error message */
+            exit(EXIT_FAILURE);  /* Exit with a failure status */
         }
 
-        for (int i = 0; i <= max_fd; i++) { /* Loop over all possible file descriptor numbers up to and including max_fd */
-            if (FD_ISSET(i, &ready_fds)) { /* Check if this file descriptor is ready for reading */
+        for (int i = 0; i <= max_fd; i++) {  /* Loop over all possible file descriptor numbers up to and including max_fd */
+            if (FD_ISSET(i, &ready_fds)) {  /* Check if this file descriptor is ready for reading */
                 if (i == server_fd) { 
                     struct sockaddr_in client_addr; 
                     socklen_t client_len = sizeof(client_addr);
